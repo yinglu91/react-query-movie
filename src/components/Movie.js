@@ -1,36 +1,48 @@
-import React from 'react';
+import React from 'react'
 import { useParams } from 'react-router-dom';
-// Config
+import API from '../API';
+import { useQuery } from 'react-query'
 import { IMAGE_BASE_URL, POSTER_SIZE } from '../config';
-// Components
 import BreadCrumb from './BreadCrumb';
 import Grid from './Grid';
 import Spinner from './Spinner';
 import MovieInfo from './MovieInfo';
 import MovieInfoBar from './MovieInfoBar';
 import Actor from './Actor';
-// Hook
-import { useMovieFetch } from '../hooks/useMovieFetch';
-// Image
 import NoImage from '../images/no_image.jpg';
+
+const fetchMovie = async (movieId) => {
+  const movie = await API.fetchMovie(movieId);
+  const credits = await API.fetchCredits(movieId);
+  const directors = credits.crew.filter(
+    member => member.job === 'Director'
+  );
+
+  return {
+    ...movie,
+    actors: credits.cast,
+    directors
+  }
+}
 
 const Movie = () => {
   const { movieId } = useParams();
+  const { data: movie, isLoading, isError } = useQuery(movieId, () => fetchMovie(movieId))
 
-  const { state: movie, loading, error } = useMovieFetch(movieId);
-
-  if (loading) return <Spinner />;
-  if (error) return <div>Something went wrong...</div>;
+  if (isLoading) return <Spinner />;
+  if (isError) return <div>Something went wrong...</div>;
 
   return (
     <>
       <BreadCrumb movieTitle={movie.original_title} />
       <MovieInfo movie={movie} />
+
       <MovieInfoBar
         time={movie.runtime}
         budget={movie.budget}
         revenue={movie.revenue}
       />
+
       <Grid header='Actors'>
         {movie.actors.map(actor => (
           <Actor
